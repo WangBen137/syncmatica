@@ -1,5 +1,11 @@
 package ch.endte.syncmatica.util;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufInputStream;
+import io.netty.buffer.ByteBufOutputStream;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.util.math.BlockPos;
 import org.apache.logging.log4j.LogManager;
 
@@ -90,6 +96,18 @@ public class SyncmaticaUtil {
         }
 
         return true;
+    }
+
+    public static void writeJsonToPacket(final JsonElement json, final PacketByteBuf buf) {
+        final Gson gson = new Gson();
+        final String jsonString = gson.toJson(json);
+        buf.writeString(jsonString);
+    }
+
+    public static JsonElement readJsonFromPacket(final PacketByteBuf buf) {
+        final Gson gson = new Gson();
+        final String jsonString = buf.readString(32767);
+        return gson.fromJson(jsonString, JsonElement.class);
     }
 
     public static double getBlockDistanceSquared(final BlockPos a, final double x, final double y, final double z) {

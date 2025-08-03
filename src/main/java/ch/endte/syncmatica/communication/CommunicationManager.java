@@ -58,7 +58,11 @@ public abstract class CommunicationManager {
             }
         }
         if (handler == null) {
-            handle(source, id, packetBuf);
+            if (id.equals(PacketType.UPDATE_MATERIAL_LIST.identifier)) {
+                handleUpdateMaterialList(source, packetBuf);
+            } else {
+                handle(source, id, packetBuf);
+            }
         } else if (handler.isFinished()) {
             notifyClose(handler);
         }
@@ -67,6 +71,16 @@ public abstract class CommunicationManager {
     // will get called for every packet not handled by an exchange
     protected abstract void handle(ExchangeTarget source, Identifier id, PacketByteBuf packetBuf);
 
+    protected void handleUpdateMaterialList(ExchangeTarget source, PacketByteBuf packetBuf) {
+        final UUID placementId = packetBuf.readUuid();
+        final ServerPlacement placement = context.getPlacementManager().getServerPlacement(placementId);
+        if (placement != null) {
+            final JsonElement json = SyncmaticaUtil.readJsonFromPacket(packetBuf);
+            final SyncmaticaMaterialList materialList = SyncmaticaMaterialList.fromJson(json);
+            placement.setMaterialList(materialList);
+        }
+    }
+
     // will get called for every finished exchange (successful or not)
     protected abstract void handleExchange(Exchange exchange);
 
@@ -74,6 +88,15 @@ public abstract class CommunicationManager {
         final PacketByteBuf buf = new PacketByteBuf(Unpooled.buffer());
         putMetaData(metaData, buf, target);
         target.sendPacket(PacketType.REGISTER_METADATA.identifier, buf, context);
+    }
+
+    public void sendMaterialListUpdate(final ServerPlacement placement, final ExchangeTarget target) {
+        final PacketByteBuf buf = new PacketByteBuf(Unpooled.buffer());
+        buf.writeUuid(placement.getId());
+        if (placement.getMaterialList() != null) {
+            SyncmaticaUtil.writeJsonToPacket(placement.getMaterialList().toJson(), buf);
+        }
+        target.sendPacket(PacketType.UPDATE_MATERIAL_LIST.identifier, buf, context);
     }
 
     public void putMetaData(final ServerPlacement metaData, final PacketByteBuf buf, final ExchangeTarget exchangeTarget) {

@@ -74,9 +74,11 @@ public enum PacketType {
     // send from client to server to mark that the editing of placement values has concluded
     // sends along the final data of the placement
 
-    MESSAGE("syncmatica:mesage");
+    MESSAGE("syncmatica:mesage"),
     // sends a message from client to server - allows for future compatability
     // can't fix the typo here lol
+
+    UPDATE_MATERIAL_LIST("syncmatica:update_material_list");
 
     public final Identifier identifier;
 

@@ -113,6 +113,10 @@ public class ServerPlacement {
         return matList;
     }
 
+    public void setMaterialList(final SyncmaticaMaterialList materialList) {
+        this.matList = materialList;
+    }
+
     public ServerPlacement setMaterialList(final SyncmaticaMaterialList matList) {
         if (this.matList != null) {
             this.matList = matList;
@@ -157,7 +161,18 @@ public class ServerPlacement {
             obj.add("subregionData", subRegionData.toJson());
         }
 
+        if (matList != null) {
+            obj.add("materialList", matList.toJson());
+        }
+
         return obj;
+    }
+
+    public JsonObject getMaterialListJson() {
+        if (matList != null) {
+            return matList.toJson();
+        }
+        return new JsonObject();
     }
 
     public static ServerPlacement fromJson(final JsonObject obj, final Context context) {
@@ -195,6 +210,10 @@ public class ServerPlacement {
 
             if (obj.has("subregionData")) {
                 newPlacement.subRegionData = SubRegionData.fromJson(obj.get("subregionData"));
+            }
+
+            if (obj.has("materialList")) {
+                newPlacement.matList = SyncmaticaMaterialList.fromJson(obj.get("materialList"));
             }
 
             return newPlacement;
