@@ -9,42 +9,61 @@ on:
 env:
   JAVA_VERSION: '21'
   GRADLE_VERSION: '8.10'
+  DEFAULT_BRANCH: 'dev'  # 显式声明默认分支
 
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      actions: write  # 解决缓存只读问题
 
     steps:
     - uses: actions/checkout@v4
+
+    - name: Verify branch
+      run: |
+        echo "Current branch: $GITHUB_REF_NAME"
+        echo "Default branch: $DEFAULT_BRANCH"
+        if [ "$GITHUB_REF_NAME" != "$DEFAULT_BRANCH" ]; then
+          echo "::warning::Building non-default branch"
+        fi
 
     - name: Set up JDK ${{ env.JAVA_VERSION }}
       uses: actions/setup-java@v4
       with:
         java-version: ${{ env.JAVA_VERSION }}
         distribution: 'temurin'
+        cache: 'gradle'  # 启用Java依赖缓存
+
+    - name: Cache Gradle
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+          ~/.gradle/daemon
+        key: ${{ runner.os }}-gradle-${{ env.GRADLE_VERSION }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+        restore-keys: |
+          ${{ runner.os }}-gradle-${{ env.GRADLE_VERSION }}-
+          ${{ runner.os }}-gradle-
 
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v3
       with:
         gradle-version: ${{ env.GRADLE_VERSION }}
-        cache-disabled: false
+        cache-read-only: false  # 显式禁用只读模式
 
     - name: Build with Gradle
-      run: ./gradlew build --warning-mode all
+      run: |
+        ./gradlew build --warning-mode all --stacktrace
+        ./gradlew dependencies > dependencies.txt  # 生成依赖报告
 
-  # Only enable this if you've enabled dependency graph in repo settings
-  # dependency-submission:
-  #   runs-on: ubuntu-latest
-  #   permissions:
-  #     contents: write
-  #   steps:
-  #   - uses: actions/checkout@v4
-  #   - name: Set up JDK ${{ env.JAVA_VERSION }}
-  #     uses: actions/setup-java@v4
-  #     with:
-  #       java-version: ${{ env.JAVA_VERSION }}
-  #       distribution: 'temurin'
-  #   - name: Generate dependency graph
-  #     run: ./gradlew generateDependencyGraph
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: build-outputs
+        path: |
+          build/libs/*.jar
+          dependencies.txt
+          build/reports/**
